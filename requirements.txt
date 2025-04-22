@@ -1,0 +1,12 @@
+python-telegram-bot==20.8
+feedparser
+openai
+python-dotenv
+watchdog
+torch
+transformers
+protobuf>=4.0.0
+newspaper3k
+lxml[html_clean]
+aiosqlite
+nest_asyncio
