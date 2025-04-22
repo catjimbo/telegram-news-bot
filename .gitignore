@@ -12,5 +12,6 @@ venv/
 # Env files
 .env
 data/
+bot.db
 # Logs
 *.log
