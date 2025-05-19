@@ -31,8 +31,8 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Список источников новостей
 RSS_SOURCES = [
-    "https://lenta.ru/rss/news",
     "https://ria.ru/export/rss2/world/index.xml",
+    "https://lenta.ru/rss/news",
     "https://www.vedomosti.ru/rss/news",
     "https://tass.ru/rss/v2.xml"
 ]
@@ -67,7 +67,7 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     matched = []
-    max_checked = 100  # ограничим количество проверок
+    max_checked = 1000  # ограничим количество проверок
     checked = 0
 
     for url in RSS_SOURCES:
@@ -85,12 +85,20 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for entry in matched:
         summary = await summarize(entry)
-        message = f"📰 {entry.title}\n\n📝 {summary}\n\n🔗 {entry.link}"
+        text = f"{entry.title}. {entry.description}"
+        trust_label = get_trust_level_label(text)
+
+        message = (
+            f"📰 {entry.title}\n\n"
+            f"📝 {summary}\n\n"
+            f"{trust_label}\n"
+            f"🔗 {entry.link}"
+        )
         await update.message.reply_text(message)
 
-# Zero-shot фильтрация
 
-def is_relevant_zero_shot(entry, tags, threshold=0.8):
+# Zero-shot фильтрация
+def is_relevant_zero_shot(entry, tags, threshold=0.85):
     title = getattr(entry, "title", "")
     description = getattr(entry, "description", "")
     summary = getattr(entry, "summary", "")
@@ -115,8 +123,32 @@ def is_relevant_zero_shot(entry, tags, threshold=0.8):
         print(f"[Zero-Shot] Ошибка: {e}")
         return False
 
-# Получение полного текста статьи
+def get_trust_level_label(text, threshold_low=0.6, threshold_high=0.85):
 
+    labels = ["надежная информация", "сомнительная информация"]
+
+    try:
+        result = classifier(text, candidate_labels=labels)
+        label = result["labels"][0]
+        score = result["scores"][0]
+
+        print(f"[TrustCheck] → {label} ({score:.2f})")
+
+        if label == "сомнительная информация":
+            if score >= threshold_high:
+                return "🔴 Низкая достоверность"
+            elif score >= threshold_low:
+                return "🟡 Сомнительная новость"
+            else:
+                return "🟢 Высокая достоверность"
+        else:
+            return "🟢 Высокая достоверность"
+
+    except Exception as e:
+        print(f"[TrustCheck] Ошибка: {e}")
+        return "⚪ Не удалось оценить"
+
+# Получение полного текста статьи
 def extract_article_text(url):
     try:
         article = newspaper.Article(url, language="ru")
@@ -127,7 +159,7 @@ def extract_article_text(url):
         print(f"Ошибка при загрузке статьи: {e}")
         return ""
 
-# Генерация саммари через ChatGPT
+# Генерация саммари
 async def summarize(entry) -> str:
     article_text = extract_article_text(entry.link)
     title = getattr(entry, "title", "")
@@ -142,7 +174,7 @@ async def summarize(entry) -> str:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5,
         )

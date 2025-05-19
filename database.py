@@ -2,12 +2,11 @@ import aiosqlite
 
 DB_PATH = "data/bot.db"
 
-
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
+                user_id INTEGER PRIMAR  Y KEY,
                 tags TEXT
             )
         """)
