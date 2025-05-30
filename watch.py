@@ -16,7 +16,7 @@ class ReloadHandler(FileSystemEventHandler):
             self.process.terminate()
             self.process.wait()
         print("Запуск бота...")
-        venv_python = r"C:\Users\timur\PycharmProjects\diploma\.venv\Scripts\python.exe"
+        venv_python = 0
         self.process = subprocess.Popen([venv_python, self.script])
 
     def on_modified(self, event):
@@ -24,9 +24,8 @@ class ReloadHandler(FileSystemEventHandler):
             self.restart_script()
 
 if __name__ == "__main__":
-    path = "."  # следим за всей папкой
-    script = "bot.py"  # имя твоего файла с ботом
-
+    path = "."
+    script = "bot.py"
     event_handler = ReloadHandler(script)
     observer = Observer()
     observer.schedule(event_handler, path=path, recursive=True)
